@@ -30,5 +30,7 @@ Note that the `echo = FALSE` parameter was added to the code chunk to prevent pr
 
 #added & again
 
-
+# (base) sarapearsell@Saras-MacBook-Air ~ % git config --global user.name "pearsell"
+# (base) sarapearsell@Saras-MacBook-Air ~ % git config --global user.email sara_pearsell@hotmail.com
+# (base) sarapearsell@Saras-MacBook-Air ~ % git config -l
 
