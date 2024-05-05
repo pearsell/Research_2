@@ -1,0 +1,188 @@
+library(dplyr)
+library(quanteda)
+
+read(harry_potter_corpus)
+
+summary(harrypotter_corpus)
+head(docvars(harrypotter_corpus))
+
+# Character development component - Final Project - Homework #6
+# 1. Tokenize, lower case, remove punctuation and remove numbers
+tokens_harrypotter <- harrypotter_corpus %>% 
+  tokens(remove_numbers = TRUE, remove_punct = TRUE) %>%
+  tokens_tolower()
+tokens_harrypotter
+
+
+# 2. Relative frequnecy of Voldemort (just his name) in each book. Save relative frequency data into a
+# new dataframe
+
+dfm_harrypotter_rel <- dfm_weight(dfm_harrypotter, scheme = "prop")
+tokens_voldemort <- tokens_select(tokens_harrypotter, pattern = "voldemort",
+                                  valuetype = "fixed", selection = "keep")
+
+dfm_voldemort <- dfm(tokens_voldemort)
+View(dfm_voldemort)
+
+
+#3. Plot the relative frequency of the name Voldemort across the 7 books. Test if the 
+# relationship is significant.
+
+plot(dfm_voldemort)
+
+chisq.test(dfm_voldemort, correct = FALSE)
+num <- chisq.test(dfm_voldemort, correct = FALSE)$statistic
+denom <- sum(dfm_voldemort)*(min(dim(dfm_voldemort))-1)
+phi <- sqrt(num/denom)
+phi
+
+#The relationship is highly significant
+
+# 4. Visually examine the dispersion of the name Voldemort across the 7 books.
+
+textplot_xray(kwic(tokens_harrypotter, pattern = "voldemort"),
+              scale = "relative",
+              sort = T)
+
+# 5. Determine the frequencies of “Voldemort” and “You-Know-Who” in the first and 
+# the last book. Perform a statistical test (along with effect size calculation) to
+# compare the frequency distribution.
+
+dfm_harrypotter <- dfm(tokens_harrypotter)
+
+dfm_v_first_last <- dfm_subset(dfm_harrypotter, BookNumber %in% c("1", "7"))
+dfm_v_first_last <- dfm_select(dfm_v_first_last, pattern = c("voldemort.+$", "you-know-who.+$"),
+                      valuetype = "regex", selection = "keep")
+
+chisq.test(dfm_v_first_last, correct = FALSE)
+num <- chisq.test(dfm_v_first_last, correct = FALSE)$statistic
+denom <- sum(dfm_v_first_last)*(min(dim(dfm_v_first_last))-1)
+phi <- sqrt(num/denom)
+phi
+chisq.test(dfm_v_first_last, correct = FALSE)$residual
+
+# VINCE NOTES This question is not about keyness.  It is meant to determine, statistically, if the 
+# distribution of voldemort and you-know-who is different before the first and the last.   
+# For this you will want a 2x2 contingency table. After calculating the statistic you can then calculate 
+# the effect size.
+
+
+
+# 6. Examine at least 10 concordance lines containing the name “Voldemort”, 
+# separately for the first book and the last book.
+v_first <- tokens_subset(tokens_harrypotter, BookNumber == "1")
+v_last <- tokens_subset(tokens_harrypotter, BookNumber == "7")
+
+kwic(v_first, "voldemort", valuetype = "fixed", window = 5)
+kwic(v_last, "voldemort", valuetype = "fixed", window = 5)
+
+
+# ANALYSIS OF THE BOOK SERIES 
+
+# PART ONE: ALL OF THE BOOKS
+
+# 1. Determine the readability of each book in the series.
+read_hp <- textstat_readability(harrypotter_corpus, measure = "Flesch.Kincaid")
+
+#2. Determine the length of each book. Then determine the lexical diversity of each book in the
+# series (N.B., please remove stopwords for this calculation).
+tokens_harrypotterNS <- tokens_select(tokens_harrypotter, pattern = stopwords("English"),
+                                 selection = "remove")
+ntoken(tokens_harrypotterNS)
+hp_ttr <- textstat_lexdiv(tokens_harrypotterNS, measure = "TTR")
+hp_ttr
+
+
+# PART 2: 2 BOOKS
+# I chose book 3 and book 5
+
+# 3. Perform a keyword analysis on each of your chosen books (N.B. please do this with stopwords removed).
+dfm_harrypotterNS <- dfm(tokens_harrypotterNS)
+book3_key <- textstat_keyness(dfm_harrypotterNS, target = "text3", measure = "lr")
+book5_key <- textstat_keyness(dfm_harrypotterNS, target = "text5", measure = "lr")
+
+
+# 4. Determine the top 10 collocations contained in each of your chosen books. Provide which is the
+# most frequent and which has the greatest collocation strength.
+
+tokens_book3 <- tokens_subset(tokens_harrypotterNS, BookNumber == "3")
+tokens_book5 <- tokens_subset(tokens_harrypotterNS, BookNumber == "5")
+
+textstat_collocations(tokens_book3, 
+                      method = "lambda", size = 2, min_count = 2,) %>% 
+  arrange(desc(lambda)) %>% 
+  head(10)
+
+textstat_collocations(tokens_book3, 
+                      method = "lambda", size = 2, min_count = 2,) %>% 
+  arrange(desc(count)) %>% 
+  head()
+
+
+textstat_collocations(tokens_book5, 
+                      method = "lambda", size = 2, min_count = 2,) %>% 
+  arrange(desc(lambda)) %>% 
+  head(10)
+
+textstat_collocations(tokens_book5, 
+                      method = "lambda", size = 2, min_count = 2,) %>% 
+  arrange(desc(count)) %>% 
+  head()
+
+
+# In book 3, the most frequent is "said harry"
+# In bok 5, the most frequent is also "said harry"
+# In book 3, the greatest collocation strenght is "diagon alley" 
+# In book 5, the greatest collocation strength is "senior undersecretary" and "devil's snare"
+
+# 5. Create a wordcloud for each of your chosen books (N.B. remove the compound token “said harry”)
+
+book3 <- tokens_compound(tokens_book3, 
+                                     phrase(c("said harry")),
+                                     valuetype = "fixed")
+book3 <- tokens_select(book3, pattern = "said harry", valuetype = "fixed", selection = "remove")
+
+
+book5 <- tokens_compound(tokens_book5, 
+                                phrase(c("said harry")),
+                                valuetype = "fixed")
+book5 <- tokens_select(book5, pattern = "said harry", valuetype = "fixed", selection = "remove")
+
+dfm_book3 <- dfm(book3)
+dfm_book5 <- dfm(book5)
+
+
+textplot_wordcloud(dfm_book3, 
+                   min_size = 0.5, max_size = 4, # visual sizes
+                   min_count = 3, max_words = 500 # frequencies to be considered
+)
+
+textplot_wordcloud(dfm_book5, 
+                   min_size = 0.5, max_size = 4, # visual sizes
+                   min_count = 3, max_words = 500 # frequencies to be considered
+)
+
+# 6. Create a network plot for each of your chosen books (again, removing the compound token “said harry”).
+fcmat_b3 <- fcm(book3,
+             context = "window", # how to find coocurrence
+             window = 5, # the size of the window in which to get coocurrence
+)
+
+fcmat_b3_top <- fcm_select(fcmat_b3,
+                        pattern = names(topfeatures(fcmat_b3, 30)),
+                        selection = "keep",
+                        valuetype = "fixed")
+
+textplot_network(fcmat_b3_top, min_freq = 2)
+
+
+fcmat_b5 <- fcm(book5,
+                context = "window", # how to find coocurrence
+                window = 5, # the size of the window in which to get coocurrence
+)
+fcmat_b5_top <- fcm_select(fcmat_b5,
+                           pattern = names(topfeatures(fcmat_b5, 30)),
+                           selection = "keep",
+                           valuetype = "fixed")
+
+textplot_network(fcmat_b5_top, min_freq = 2)
